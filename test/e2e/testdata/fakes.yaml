@@ -1,0 +1,55 @@
+# Argo owns the three coordinators; the platform owns the Gateway and policy.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trino-e2e
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fake-gateway
+  namespace: trino-e2e
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: fake-gateway }
+  template:
+    metadata:
+      labels: { app: fake-gateway }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: gateway
+          image: example.com/trino-maintenance-fakebackend:e2e
+          imagePullPolicy: IfNotPresent
+          args:
+            - --mode=gateway
+            - --backend=general-1=http://fake-trino-1.trino-e2e.svc:8080=general
+            - --backend=general-2=http://fake-trino-2.trino-e2e.svc:8080=general
+            - --backend=general-3=http://fake-trino-3.trino-e2e.svc:8080=general
+          ports:
+            - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fake-gateway
+  namespace: trino-e2e
+spec:
+  selector: { app: fake-gateway }
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: trino.example.io/v1alpha1
+kind: TrinoRoutingGroup
+metadata:
+  name: general
+spec:
+  minAvailable: 2

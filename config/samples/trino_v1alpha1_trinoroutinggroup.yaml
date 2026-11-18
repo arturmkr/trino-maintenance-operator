@@ -1,0 +1,10 @@
+apiVersion: trino.example.io/v1alpha1
+kind: TrinoRoutingGroup
+metadata:
+  labels:
+    app.kubernetes.io/name: trino-maintenance-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: general
+spec:
+  # With general-1, general-2 and general-3 one backend may be drained at a time.
+  minAvailable: 2

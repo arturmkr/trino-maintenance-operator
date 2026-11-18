@@ -1,0 +1,159 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  name: trinoclusters.trino.example.io
+spec:
+  group: trino.example.io
+  names:
+    kind: TrinoCluster
+    listKind: TrinoClusterList
+    plural: trinoclusters
+    singular: trinocluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.routingGroup
+      name: Routing-Group
+      type: string
+    - jsonPath: .spec.gatewayBackend
+      name: Gateway-Backend
+      type: string
+    - jsonPath: .spec.coordinator.url
+      name: Coordinator
+      priority: 1
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          TrinoCluster describes one real Trino/Starburst backend that sits behind Trino Gateway.
+          It is a configuration resource: the operator reads it but never changes it.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of TrinoCluster
+            properties:
+              coordinator:
+                description: coordinator describes how to reach the Trino coordinator.
+                properties:
+                  credentialsSecret:
+                    description: |-
+                      credentialsSecret optionally references a Secret in the TrinoCluster namespace
+                      holding `username` and `password` keys used for HTTP basic authentication
+                      against the coordinator (/metrics is protected by the Trino authentication
+                      configuration). When omitted the operator only sends an X-Trino-User header.
+                    properties:
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  url:
+                    description: |-
+                      url is the base URL of the coordinator HTTP endpoint,
+                      e.g. http://general-1-coordinator.trino.svc:8080
+                    pattern: ^https?://.+
+                    type: string
+                    x-kubernetes-validations:
+                    - message: coordinator URL is immutable
+                      rule: self == oldSelf
+                required:
+                - url
+                type: object
+              gatewayBackend:
+                description: gatewayBackend is the backend name registered in Trino
+                  Gateway.
+                minLength: 1
+                type: string
+                x-kubernetes-validations:
+                - message: gatewayBackend is immutable
+                  rule: self == oldSelf
+              routingGroup:
+                description: routingGroup is the name of the TrinoRoutingGroup this
+                  backend belongs to.
+                minLength: 1
+                type: string
+                x-kubernetes-validations:
+                - message: routingGroup is immutable
+                  rule: self == oldSelf
+              workload:
+                description: workload references the Kubernetes workloads running
+                  this cluster.
+                properties:
+                  coordinator:
+                    description: coordinator workload, informational only. Readiness
+                      does not prove query completion.
+                    properties:
+                      kind:
+                        description: kind of the workload.
+                        enum:
+                        - Deployment
+                        - StatefulSet
+                        type: string
+                      name:
+                        description: name of the workload.
+                        minLength: 1
+                        type: string
+                    required:
+                    - kind
+                    - name
+                    type: object
+                  workers:
+                    description: workers workload. Informational in v0.1.
+                    properties:
+                      kind:
+                        description: kind of the workload.
+                        enum:
+                        - Deployment
+                        - StatefulSet
+                        type: string
+                      name:
+                        description: name of the workload.
+                        minLength: 1
+                        type: string
+                    required:
+                    - kind
+                    - name
+                    type: object
+                required:
+                - coordinator
+                type: object
+            required:
+            - coordinator
+            - gatewayBackend
+            - routingGroup
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}

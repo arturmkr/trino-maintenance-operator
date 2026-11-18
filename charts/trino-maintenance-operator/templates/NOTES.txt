@@ -1,0 +1,24 @@
+trino-maintenance-operator {{ .Chart.AppVersion }} is being deployed to namespace {{ .Release.Namespace }}.
+
+Trino Gateway: {{ .Values.gateway.url }}
+{{- if .Values.gateway.credentialsSecret.name }}
+Gateway credentials: Secret/{{ .Values.gateway.credentialsSecret.name }} (keys: username/password or token)
+{{- else }}
+Gateway credentials: none (unauthenticated API)
+{{- end }}
+
+Next steps:
+  1. Declare an availability policy per routing group:
+       kubectl apply -f - <<EOF
+       apiVersion: trino.example.io/v1alpha1
+       kind: TrinoRoutingGroup
+       metadata: { name: general }
+       spec: { minAvailable: 2 }
+       EOF
+  2. Declare each Trino backend with a TrinoCluster next to its workload.
+  3. Add the ArgoCD PreSync/PostSync hook templates and the health check from
+     integrations/argocd/ to your Trino chart / ArgoCD configuration.
+
+Watch the operator:
+  kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "trino-maintenance-operator.fullname" . }} -f
+  kubectl get trinomaintenances -A

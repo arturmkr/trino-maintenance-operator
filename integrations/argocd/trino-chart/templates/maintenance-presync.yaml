@@ -1,0 +1,17 @@
+{{- if and .Values.maintenance.enabled .Values.maintenance.hooksEnabled }}
+# PreSync hook: ArgoCD creates it before syncing the release and waits until it is
+# Healthy (phase Drained, see integrations/argocd/health.lua). The operator
+# deactivates the backend in Trino Gateway and waits for running/queued queries
+# to reach zero. BeforeHookCreation deletes the previous Drain when the next sync starts.
+apiVersion: trino.example.io/v1alpha1
+kind: TrinoMaintenance
+metadata:
+  name: {{ include "trino.maintenance.clusterName" . }}-drain
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  clusterName: {{ include "trino.maintenance.clusterName" . }}
+  action: Drain
+{{- end }}

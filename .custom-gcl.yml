@@ -1,0 +1,11 @@
+# This file configures golangci-lint with module plugins.
+# Optional for IDEs using a custom golangci-lint binary. The Makefile runs
+# the same pinned logcheck analyzer standalone, without rebuilding the linter.
+#
+# See: https://golangci-lint.run/plugins/module-plugins/
+version: v2.13.1
+plugins:
+  # logcheck validates structured logging calls and parameters (e.g., balanced key-value pairs)
+  - module: "sigs.k8s.io/logtools"
+    import: "sigs.k8s.io/logtools/logcheck/gclplugin"
+    version: v0.11.0

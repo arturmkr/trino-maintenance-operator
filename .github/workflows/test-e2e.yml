@@ -1,0 +1,35 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Acceptance suite (fresh private Docker daemon)
+        type: choice
+        options: [e2e-argocd, e2e-trino]
+        default: e2e-argocd
+
+permissions: {}
+
+jobs:
+  test-e2e:
+    permissions:
+      contents: read
+    name: Run on Ubuntu
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Clone the code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Argo CD rollout, failure and recovery
+        if: github.event_name == 'push' || inputs.suite == 'e2e-argocd'
+        run: make e2e-argocd
+
+      - name: Query survives drain through Trino Gateway
+        if: github.event_name == 'push' || inputs.suite == 'e2e-trino'
+        run: make e2e-trino

@@ -1,0 +1,31 @@
+# Added ONLY to the test Helm repository, never to a production chart.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.testService }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  progressDeadlineSeconds: 25
+  selector:
+    matchLabels: {app: {{ .Values.testService }}}
+  template:
+    metadata:
+      labels: {app: {{ .Values.testService }}}
+    spec:
+      containers:
+        - name: coordinator
+          image: example.com/trino-maintenance-fakebackend:e2e
+          args: [--mode=trino, --version={{ .Chart.Version }}]
+          readinessProbe:
+            httpGet:
+              port: 8080
+              path: {{ if and (eq .Release.Name "general-1") (eq .Chart.Version "0.2.0") }}/broken{{ else }}/v1/info{{ end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.testService }}
+spec:
+  selector: {app: {{ .Values.testService }}}
+  ports: [{port: 8080}]

@@ -1,0 +1,18 @@
+apiVersion: v2
+name: trino-maintenance-operator
+description: Kubernetes operator for safe maintenance and upgrades of Trino clusters running behind Trino Gateway
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.26.0-0"
+keywords:
+  - trino
+  - trino-gateway
+  - operator
+  - maintenance
+  - argocd
+home: https://github.com/arturmkr/trino-maintenance-operator
+sources:
+  - https://github.com/arturmkr/trino-maintenance-operator
+annotations:
+  org.opencontainers.image.source: https://github.com/arturmkr/trino-maintenance-operator

@@ -1,0 +1,36 @@
+# Values consumed by the maintenance templates. Merge them into the values of
+# your existing Trino chart.
+
+# Shape of the upstream Trino chart values that the templates read.
+trino:
+  commonLabels:
+    # Name of the TrinoCluster resource; defaults to the Helm release name when unset.
+    trino-cluster: ""
+
+# Trino Gateway / maintenance integration.
+maintenance:
+  # Register the backend during regular Sync.
+  enabled: true
+  # First sync only registers the backend. Enable hooks in a second commit,
+  # before making any changes to the workload.
+  hooksEnabled: false
+  # TrinoRoutingGroup this backend belongs to (cluster-scoped resource created once
+  # by the platform team).
+  routingGroup: general
+  # Backend name registered in Trino Gateway. Defaults to the cluster name.
+  gatewayBackend: ""
+  coordinator:
+    # URL of the coordinator service. Defaults to http://<release>-trino.<namespace>.svc:<port>
+    url: ""
+    port: 8080
+    # Optional Secret (same namespace) with username/password for HTTP basic auth on /metrics.
+    credentialsSecret: ""
+  workload:
+    coordinator:
+      kind: Deployment
+      # Defaults to <release>-trino-coordinator
+      name: ""
+    workers:
+      kind: Deployment
+      # Defaults to <release>-trino-worker
+      name: ""

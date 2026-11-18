@@ -1,0 +1,119 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  name: trinoroutinggroups.trino.example.io
+spec:
+  group: trino.example.io
+  names:
+    kind: TrinoRoutingGroup
+    listKind: TrinoRoutingGroupList
+    plural: trinoroutinggroups
+    singular: trinoroutinggroup
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.minAvailable
+      name: Min-Available
+      type: integer
+    - jsonPath: .status.activeMaintenance.name
+      name: Active-Maintenance
+      type: string
+    - jsonPath: .status.activeMaintenance.clusterName
+      name: Maintenance-Cluster
+      priority: 1
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          TrinoRoutingGroup is the availability policy for a set of TrinoClusters that share a Trino
+          Gateway routing group. It is cluster-scoped because its backends may live in different namespaces.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of TrinoRoutingGroup
+            properties:
+              minAvailable:
+                default: 0
+                description: |-
+                  minAvailable is the minimum number of backends of this routing group that must
+                  stay active and HEALTHY in Gateway when deactivating another backend.
+                  With three backends and minAvailable=2 one backend can be drained at a time;
+                  once only two backends are active no further drain is permitted.
+                format: int32
+                minimum: 0
+                type: integer
+            type: object
+          status:
+            description: status defines the observed state of TrinoRoutingGroup
+            properties:
+              activeMaintenance:
+                description: |-
+                  activeMaintenance is set while a backend of this routing group is under maintenance.
+                  It serialises maintenance operations within the group.
+                properties:
+                  clusterName:
+                    description: clusterName is the TrinoCluster under maintenance.
+                    type: string
+                  clusterUID:
+                    description: clusterUID pins this window to the registered backend,
+                      not a recreated CR.
+                    type: string
+                  drainUID:
+                    description: drainUID identifies this incarnation of the named
+                      PreSync request.
+                    type: string
+                  name:
+                    description: name of the owning TrinoMaintenance.
+                    type: string
+                  namespace:
+                    description: namespace of the owning TrinoMaintenance (and of
+                      its TrinoCluster).
+                    type: string
+                  previousResumeUID:
+                    description: |-
+                      previousResumeUID is the pre-existing named Resume, if any. It can never
+                      open this window, even after an operator restart or retry of the same revision.
+                    type: string
+                  verifiedOffline:
+                    description: |-
+                      verifiedOffline records a successful idle observation for this backend.
+                      Cleared before any activation attempt, including one that times out.
+                    type: boolean
+                required:
+                - clusterName
+                - clusterUID
+                - drainUID
+                - name
+                - namespace
+                type: object
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

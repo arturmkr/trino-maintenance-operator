@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: {name: general-ID, namespace: argocd}
+spec:
+  project: upgrades
+  destination: {server: "https://kubernetes.default.svc", namespace: trino-e2e}
+  source:
+    repoURL: http://charts.trino-e2e.svc
+    chart: trino-maintenance-hooks
+    targetRevision: VERSION
+    helm:
+      valuesObject:
+        testService: fake-trino-ID
+        maintenance:
+          hooksEnabled: HOOKS
+          coordinator: {url: "http://fake-trino-ID.trino-e2e.svc:8080"}
+  syncPolicy: {automated: {}}

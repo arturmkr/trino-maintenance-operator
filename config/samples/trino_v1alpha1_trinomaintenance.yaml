@@ -1,0 +1,11 @@
+apiVersion: trino.example.io/v1alpha1
+kind: TrinoMaintenance
+metadata:
+  labels:
+    app.kubernetes.io/name: trino-maintenance-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: general-1-drain
+  namespace: trino
+spec:
+  clusterName: general-1
+  action: Drain

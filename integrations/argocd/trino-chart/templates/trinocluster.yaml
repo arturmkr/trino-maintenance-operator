@@ -1,0 +1,25 @@
+{{- if .Values.maintenance.enabled }}
+# Declares this Trino backend to trino-maintenance-operator. A regular (non-hook)
+# resource: it is created during the Sync phase and lives as long as the release.
+apiVersion: trino.example.io/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: {{ include "trino.maintenance.clusterName" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  routingGroup: {{ required "maintenance.routingGroup is required" .Values.maintenance.routingGroup }}
+  gatewayBackend: {{ include "trino.maintenance.gatewayBackend" . }}
+  coordinator:
+    url: {{ include "trino.maintenance.coordinatorUrl" . }}
+    {{- with .Values.maintenance.coordinator.credentialsSecret }}
+    credentialsSecret:
+      name: {{ . }}
+    {{- end }}
+  workload:
+    coordinator:
+      kind: {{ .Values.maintenance.workload.coordinator.kind }}
+      name: {{ default (printf "%s-trino-coordinator" .Release.Name) .Values.maintenance.workload.coordinator.name }}
+    workers:
+      kind: {{ .Values.maintenance.workload.workers.kind }}
+      name: {{ default (printf "%s-trino-worker" .Release.Name) .Values.maintenance.workload.workers.name }}
+{{- end }}

@@ -1,0 +1,20 @@
+apiVersion: trino.example.io/v1alpha1
+kind: TrinoCluster
+metadata:
+  labels:
+    app.kubernetes.io/name: trino-maintenance-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: general-1
+  namespace: trino
+spec:
+  routingGroup: general
+  gatewayBackend: general-1
+  coordinator:
+    url: http://general-1-coordinator.trino.svc:8080
+  workload:
+    coordinator:
+      kind: Deployment
+      name: general-1-coordinator
+    workers:
+      kind: Deployment
+      name: general-1-workers

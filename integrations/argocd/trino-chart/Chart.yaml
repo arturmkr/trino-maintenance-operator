@@ -1,0 +1,9 @@
+apiVersion: v2
+name: trino-maintenance-hooks
+description: |
+  Example of the templates to add to an existing Trino Helm chart so that ArgoCD
+  drains the backend before a sync and resumes it afterwards via trino-maintenance-operator.
+  Copy the templates including _maintenance.tpl; this chart is a rendering fixture.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

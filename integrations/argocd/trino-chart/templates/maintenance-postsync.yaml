@@ -1,0 +1,18 @@
+{{- if and .Values.maintenance.enabled .Values.maintenance.hooksEnabled }}
+# PostSync hook: ArgoCD creates it only after every synced resource is Healthy,
+# i.e. the new Trino version is running. The operator verifies the coordinator
+# answers /v1/info and activates the backend in Trino Gateway again, then releases
+# the routing group so the next backend may start its maintenance.
+# If the rollout failed, this hook is never created and the backend stays OFF.
+apiVersion: trino.example.io/v1alpha1
+kind: TrinoMaintenance
+metadata:
+  name: {{ include "trino.maintenance.clusterName" . }}-resume
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  clusterName: {{ include "trino.maintenance.clusterName" . }}
+  action: Resume
+{{- end }}

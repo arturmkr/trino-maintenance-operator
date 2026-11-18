@@ -1,0 +1,26 @@
+# Only project inputs; do not send the working tree, git or user configs.
+**
+!go.mod
+!go.sum
+!Makefile
+!api/
+!api/**
+!cmd/
+!cmd/**
+!internal/
+!internal/**
+!integrations/
+!integrations/**
+!config/
+!config/**
+!charts/
+!charts/**
+!hack/
+!hack/**
+!test/
+!test/**
+**/.DS_Store
+**/*.kubeconfig
+**/.env*
+**/*.key
+**/*.pem

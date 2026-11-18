@@ -1,0 +1,115 @@
+# Default values for trino-maintenance-operator.
+
+# Number of operator replicas. More than one is safe: controller-runtime leader
+# election makes sure only one replica reconciles at a time.
+replicaCount: 1
+
+image:
+  repository: ghcr.io/arturmkr/trino-maintenance-operator
+  # Defaults to the chart appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# One Trino Gateway per operator deployment (v0.1).
+gateway:
+  # Base URL of the Trino Gateway, e.g. https://trino-gateway.example.com. Required.
+  url: ""
+  # Secret holding the credentials for the Gateway backend API. Keys:
+  #   username / password - HTTP basic auth (Gateway form/basic authentication,
+  #                         preset user with USER and API privileges)
+  #   token               - bearer token (Gateway JWT authentication)
+  # All keys are optional; an empty name disables authentication.
+  credentialsSecret:
+    name: ""
+    # The Secret must live in the release namespace because it is injected into the
+    # operator Pod as environment variables. Leave empty or set to the release namespace.
+    namespace: ""
+
+operator:
+  # How often a Waiting TrinoMaintenance re-checks routing-group ownership and availability.
+  waitingInterval: 15s
+  # How often a Draining/Resuming TrinoMaintenance re-reads coordinator metrics/health.
+  pollInterval: 5s
+  # Timeout for HTTP calls to Trino Gateway and coordinators.
+  httpTimeout: 15s
+  # Additional command line arguments, e.g. ["--zap-log-level=debug"].
+  extraArgs: []
+
+leaderElection:
+  enabled: true
+
+metrics:
+  # Expose controller-runtime metrics on a Service.
+  enabled: false
+  port: 8443
+  # Serve metrics over HTTPS protected by Kubernetes authn/authz (recommended).
+  secure: true
+  service:
+    annotations: {}
+
+serviceAccount:
+  create: true
+  annotations: {}
+  # Defaults to the fullname.
+  name: ""
+
+rbac:
+  create: true
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: health
+  initialDelaySeconds: 15
+  periodSeconds: 20
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: health
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# Extra environment variables for the manager container.
+extraEnv: []
+# Extra volumes / mounts, e.g. a corporate CA bundle for HTTPS coordinators or Gateway.
+extraVolumes: []
+extraVolumeMounts: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+priorityClassName: ""
+terminationGracePeriodSeconds: 10
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

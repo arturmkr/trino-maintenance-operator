@@ -1,0 +1,33 @@
+# No bind mounts, published ports, host docker.sock or credential forwarding.
+services:
+  unit:
+    build: {context: .., dockerfile: test/runner.Dockerfile, target: unit}
+    network_mode: none
+    command: ["go", "test", "-mod=readonly", "-count=1", "./..."]
+  charts:
+    build: {context: .., dockerfile: test/runner.Dockerfile, target: charts}
+    network_mode: none
+    command: ["make", "_helm-lint"]
+  engine:
+    image: docker:28.5.2-dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    command: ["dockerd", "--host=unix:///var/run/docker.sock", "--host=tcp://127.0.0.1:2375", "--tls=false"]
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 2s
+      timeout: 5s
+      retries: 40
+  integration:
+    build: {context: .., dockerfile: test/runner.Dockerfile, target: "${TEST_TARGET:-integration}"}
+    network_mode: service:engine
+    depends_on:
+      engine: {condition: service_healthy}
+    env_file: images.env
+    environment:
+      DOCKER_HOST: tcp://127.0.0.1:2375
+      TESTCONTAINERS_HOST_OVERRIDE: 127.0.0.1
+      TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /var/run/docker.sock
+      POD_IMAGES: "${POD_IMAGES:-}"
+    command: ["go", "test", "-mod=readonly", "-tags=integration", "-v", "-count=1", "-timeout=25m", "-run", "${TEST_NAME:-TestControllers}$$", "${TEST_PACKAGE:-./internal/controller}"]

@@ -1,0 +1,89 @@
+name: Release to GHCR
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Check existing main CI for the release commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Validate release tag
+        id: tag
+        shell: bash
+        run: |
+          n='(0|[1-9][0-9]*)'
+          pattern="^v${n}\.${n}\.${n}(-rc\.${n})?$"
+          [[ $GITHUB_REF_NAME =~ $pattern ]] || { echo "Expected vX.Y.Z or vX.Y.Z-rc.N"; exit 1; }
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Require successful push runs for this exact SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          for workflow in lint.yml test.yml test-e2e.yml; do
+            state=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs" \
+              -f event=push -f branch=main -f head_sha="$GITHUB_SHA" -F per_page=1 \
+              --jq '.workflow_runs[0] | if .status == "completed" then .conclusion else (.status // "missing") end')
+            if [[ "$state" != success ]]; then
+              echo "::error::$workflow on main for $GITHUB_SHA: $state. Packages will not be published."
+              exit 1
+            fi
+          done
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+      IMAGE: ghcr.io/arturmkr/trino-maintenance-operator
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
+        with:
+          version: v3.19.0
+      - name: Package chart and verify the image reference
+        run: |
+          helm package charts/trino-maintenance-operator --destination "$RUNNER_TEMP" \
+            --version "$VERSION" --app-version "$VERSION"
+          helm template check "$RUNNER_TEMP/trino-maintenance-operator-$VERSION.tgz" \
+            --set gateway.url=https://gateway.example.com --show-only templates/deployment.yaml \
+            > "$RUNNER_TEMP/deployment.yaml"
+          test "$(awk '$1 == "image:" {print $2}' "$RUNNER_TEMP/deployment.yaml")" = "$IMAGE:$VERSION"
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: arm64
+      - name: Log in to GHCR
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          printf '%s' "$TOKEN" | helm registry login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Publish image, then chart
+        run: |
+          docker buildx create --use
+          docker buildx build --platform linux/amd64,linux/arm64 --push \
+            --tag "$IMAGE:$VERSION" \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" .
+          helm push "$RUNNER_TEMP/trino-maintenance-operator-$VERSION.tgz" oci://ghcr.io/arturmkr/charts

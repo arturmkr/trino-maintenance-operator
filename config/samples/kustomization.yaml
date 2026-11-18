@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- trino_v1alpha1_trinocluster.yaml
+- trino_v1alpha1_trinoroutinggroup.yaml
+- trino_v1alpha1_trinomaintenance.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
